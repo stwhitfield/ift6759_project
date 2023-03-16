@@ -1,3 +1,9 @@
+#!/usr/bin/env python
+# coding: utf-8
+
+# In[1]:
+
+
 import pydicom
 from pydicom import dcmread
 import dicom2jpg
@@ -9,6 +15,9 @@ from PIL import Image
 
 
 # ### Determine mapping between brixia score and severity score
+
+# In[2]:
+
 
 def convert_severity_score(input_score,convert_to_opacity=True):
     """
@@ -64,6 +73,12 @@ def convert_severity_score(input_score,convert_to_opacity=True):
         converted_score = opacity_to_brixia.coef_ * input_score + opacity_to_brixia.intercept_
         
     return round(float(converted_score),2)
+
+
+# ### Extract info from .dcm files (brixia)
+
+# In[3]:
+
 
 def extract_dcm_info(folder_path, keywords, convert_to_jpg=False):
     """
@@ -131,6 +146,9 @@ def extract_dcm_info(folder_path, keywords, convert_to_jpg=False):
     return df
 
 
+# In[4]:
+
+
 # Define the target directory
 folder_path = "./Datasets/Brixia/dicom/dicom_clean/"
 # Get a list of keywords to extract from the .dcm "image"
@@ -166,7 +184,16 @@ brixia_metadata.rename(columns={'StudyDate':'date',
                                'InstitutionName': 'location'}, inplace = True)
 
 
+# In[5]:
+
+
+brixia_metadata
+
+
 # ### Process RALO metadata
+
+# In[6]:
+
 
 # Helper function to batch rename (add a name to) files
 def prepend_info(folder_path,addition):
@@ -184,21 +211,39 @@ def prepend_info(folder_path,addition):
         os.rename(old_name, new_name)
 
 
+# In[7]:
+
+
 # Process RALO images so they have a more descriptive name
 folder_path = './Datasets/RALO/CXR_images_scored'
-prepend_info(folder_path, 'ralo_sbm_')
+# prepend_info(folder_path, 'ralo_sbm_')
 
 # Get ralo metadata
 ralo_metadata = pd.read_csv('./Datasets/RALO/ralo-dataset-metadata.csv', skiprows=1)
+
+
+# In[9]:
+
 
 # Add filename to ralo metadata and average the total geographic and opacity scores
 ralo_metadata['filename'] = [f'ralo_sbm_{i}.jpg' for i in range(len(ralo_metadata))]
 ralo_metadata['StudyDate'] = ralo_metadata['Exam_DateTime'].str[:8]
 ralo_metadata['GeographicScoreGlobal'] = ralo_metadata[['Total GEOGRAPHIC','Total GEOGRAPHIC.1']].mean(axis=1)
-ralo_metadata['OpacityScoreGlobal'] = ralo_metadata[['Total OPACITY.1','Total OPACITY.1']].mean(axis=1)
+ralo_metadata['OpacityScoreGlobal'] = ralo_metadata[['Total OPACITY','Total OPACITY.1']].mean(axis=1)
 
 # Give all items in the ralo dataset a "3"
 ralo_metadata['Dataset'] = 3
+
+## Problem: RALO opacity is scored (0-8) not (0-6)
+
+# Get the ralo dataset (#3) opacity score values 
+to_scale = ralo_metadata.loc[ralo_metadata['Dataset'] == 3, 'OpacityScoreGlobal']
+# minmax scale them to (0-1)
+to_scale = (to_scale - to_scale.min()) / (to_scale.max() - to_scale.min())
+# Rescale to (0-6)
+to_scale = to_scale*6
+# Save values in appropriate column
+ralo_metadata.loc[ralo_metadata['Dataset'] == 3, 'OpacityScoreGlobal'] = to_scale
 
 # rename columns to be more consistent with cohen
 ralo_metadata.rename(columns={'StudyDate':'date',
@@ -208,6 +253,9 @@ ralo_metadata.rename(columns={'StudyDate':'date',
 
 
 # ### Process Cohen ieee8023 metadata
+
+# In[10]:
+
 
 # Get metadata file from Cohen ieee8023 dataset
 cohen_metadata = pd.read_csv("./Datasets/ieee8023/metadata.csv")
@@ -242,7 +290,14 @@ cohen_metadata['Dataset'] = 1
 
 # ### Combine all three metadata files (Brixia, RALO, Cohen)
 
+# In[11]:
+
+
 metadata = pd.concat([cohen_metadata,ralo_metadata,brixia_metadata], ignore_index=True)
+
+
+# In[13]:
+
 
 # Drop superfluous columns
 metadata = metadata.drop(columns = ['folder', 'doi', 'url',
@@ -270,6 +325,10 @@ metadata = metadata.loc[:,neworder]
 # Get only rows where we have an opacity score (drop rows that are na)
 metadata = metadata[metadata['OpacityScoreGlobal'].notna()]
 
+
+# In[14]:
+
+
 # remove any images that we don't have data for from the Combined folder
 to_keep = list(metadata['filename'])
 folder = './Datasets/Combined/images'
@@ -277,5 +336,10 @@ for image in os.listdir(folder):
     if image not in to_keep:
         os.remove(os.path.join(folder,image))
 
+
+# In[15]:
+
+
 # Save metadata dataframe as a csv
 metadata.to_csv('combined_cxr_metadata.csv')
+
