@@ -38,7 +38,8 @@ class CovidSeverityDataset(Dataset):
       else:
         convert_tensor = transforms.PILToTensor()
         image = convert_tensor(image)
-      return (image.float(), y_label.to(torch.int64))
+        image = image.float()
+      return (image, y_label.to(torch.int64))
   
     def get_subsets(self):
       subsets = random_split(self, self.split_lengths, generator=torch.Generator().manual_seed(self.split_seed))
