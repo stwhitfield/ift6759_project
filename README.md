@@ -6,5 +6,11 @@ The COVID-19 pandemic has strained healthcare resources and prompted discussion 
 
 ## Results
 
+### Classification task
+<img width="422" alt="classification_results" src="https://user-images.githubusercontent.com/14030344/235335107-adc56768-bb85-4985-923e-b79d795a01f6.png">
+
+### Regression task
+<img width="422" alt="regression_results" src="https://user-images.githubusercontent.com/14030344/235335149-8ef9874a-9c45-4f2a-a9b2-4165efc05ccc.png">
+
 ## Models
 - Fine-tuned ViT is available at https://huggingface.co/ludolara/vit-COVID-19-severity.
